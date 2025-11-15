@@ -1,8 +1,9 @@
+// ScrumBoard.cpp
 #include "ScrumBoard.h"
 #include <iostream>
 #include <algorithm>
 
-//название секций и компаний
+//конструктор
 ScrumBoard::ScrumBoard() {
     sectionNames = {"Назначено", "В процессе", "Блокировано", "Готово"};
     tasks.resize(4);
@@ -12,26 +13,29 @@ ScrumBoard::ScrumBoard() {
     draggingTaskSection = -1;
     draggingTaskIndex = -1;
     showCompanyWindow = false;
+    companyButtonPressed = false;
+    saveButtonPressed = false;
     
     companies = {"Компания A", "Компания Б", "Компания С", "Компания Д"};
 }
 
+//инициализация
 bool ScrumBoard::initialize() {
     if (!font.loadFromFile("ofont.ru_Pastry Chef.ttf")) {
         std::cout << "Не удалось загрузить шрифт!" << std::endl;
         return false;
     }
     
-    createTitle(); //текст названия
-    createTopPanel(); //верхняя панель
-    createSections(); //секции
-    createSampleTasks(); //текст секций
-    createCompanyWindow(); //окно компании
+    createTitle();
+    createTopPanel();
+    createSections();
+    createSampleTasks();
+    createCompanyWindow();
     
     return true;
 }
 
-//название работы
+//создание заголовка
 void ScrumBoard::createTitle() {
     titleText.setString("Scrum Board - Управление задачами");
     titleText.setFont(font);
@@ -41,35 +45,57 @@ void ScrumBoard::createTitle() {
     titleText.setPosition(650, 110);
 }
 
-//верхняя панель
+//создание верхней панели
 void ScrumBoard::createTopPanel() {
-    topPanel.setSize(sf::Vector2f(1920, 60));
+    topPanel.setSize(sf::Vector2f(WINDOW_WIDTH, 60));
     topPanel.setFillColor(sf::Color(120, 165, 205));
     topPanel.setOutlineThickness(0);
     topPanel.setPosition(0, 20);
 
-    //компании
+    //кнопка компаний - слева
     companyButton.setSize(sf::Vector2f(200, 40));
     companyButton.setFillColor(sf::Color(180, 210, 235));
     companyButton.setOutlineThickness(0);
     companyButton.setPosition(150, 30);
 
-    //текст названия "компании"
+    //кнопка сохранить - справа
+    saveButton.setSize(sf::Vector2f(200, 40));
+    saveButton.setFillColor(sf::Color(180, 210, 235));
+    saveButton.setOutlineThickness(0);
+    saveButton.setPosition(WINDOW_WIDTH - 350, 30); // 1920 - 350 = 1570
+
+    //текст кнопки компаний
     companyButtonText.setString("Компании");
     companyButtonText.setFont(font);
     companyButtonText.setCharacterSize(24);
     companyButtonText.setFillColor(sf::Color(50, 50, 80));
     companyButtonText.setStyle(sf::Text::Bold);
     
-    //текст по центру
-    sf::FloatRect textBounds = companyButtonText.getLocalBounds();
-    companyButtonText.setPosition(
-        150 + (200 - textBounds.width) / 2,
-        30 + (40 - textBounds.height) / 2 - 5
+    //текст кнопки сохранить
+    saveButtonText.setString("Сохранить");
+    saveButtonText.setFont(font);
+    saveButtonText.setCharacterSize(24);
+    saveButtonText.setFillColor(sf::Color(50, 50, 80));
+    saveButtonText.setStyle(sf::Text::Bold);
+
+    //центрирование текста
+    centerText(companyButtonText, companyButton);
+    centerText(saveButtonText, saveButton);
+}
+
+//центрирование текста в прямоугольнике
+void ScrumBoard::centerText(sf::Text& text, const sf::RectangleShape& shape, float yOffset) {
+    sf::FloatRect textBounds = text.getLocalBounds();
+    sf::Vector2f shapePos = shape.getPosition();
+    sf::Vector2f shapeSize = shape.getSize();
+    
+    text.setPosition(
+        shapePos.x + (shapeSize.x - textBounds.width) / 2,
+        shapePos.y + (shapeSize.y - textBounds.height) / 2 + yOffset
     );
 }
 
-//открытие окна компаний
+//создание окна компаний
 void ScrumBoard::createCompanyWindow() {
     float companyHeight = 55.0f;
     float padding = 15.0f;
@@ -88,17 +114,16 @@ void ScrumBoard::createCompanyWindow() {
     
     companyRects.clear();
     companyTexts.clear();
-    dividerLines.clear();
     
     float companyWidth = windowWidth - padding * 2;
     
-    //создание кнопки компаний
+    //создание кнопок компаний
     for (size_t i = 0; i < companies.size(); i++) {
         sf::RectangleShape companyRect;
         companyRect.setSize(sf::Vector2f(companyWidth, companyHeight));
         companyRect.setFillColor(sf::Color(180, 210, 235));
-        companyRect.setOutlineColor(sf::Color(100, 130, 160)); //ЦВЕТ ОБВОДКИ
-        companyRect.setOutlineThickness(3); //ТОЛЩИНА ОБВОДКИ
+        companyRect.setOutlineColor(sf::Color(100, 130, 160));
+        companyRect.setOutlineThickness(3);
         companyRect.setPosition(startX + padding, startY + padding + i * companyHeight);
         companyRects.push_back(companyRect);
         
@@ -109,16 +134,12 @@ void ScrumBoard::createCompanyWindow() {
         companyText.setFillColor(sf::Color(50, 50, 80));
         companyText.setStyle(sf::Text::Bold);
         
-        sf::FloatRect textBounds = companyText.getLocalBounds();
-        companyText.setPosition(
-            startX + padding + (companyWidth - textBounds.width) / 2,
-            startY + padding + i * companyHeight + (companyHeight - textBounds.height) / 2 - 3
-        );
+        centerText(companyText, companyRect, -3.0f);
         companyTexts.push_back(companyText);
     }
 }
 
-//создание и расположение секций
+//создание секций
 void ScrumBoard::createSections() {
     sf::Color sectionColors[] = {
         sf::Color(180, 210, 235),
@@ -156,13 +177,13 @@ void ScrumBoard::createSections() {
     }
 }
 
-//примеры в секциях
+//создание примеров задач
 void ScrumBoard::createSampleTasks() {
     for (int i = 0; i < 4; i++) {
         tasks[i].clear();
     }
     
-    addTask("Получение презентаци", 0);
+    addTask("Получение презентации", 0);
     addTask("Просмотр презентации", 0);
     addTask("Выбор темы", 0);
     addTask("Особые описания", 0);
@@ -182,6 +203,7 @@ void ScrumBoard::createSampleTasks() {
     updateTaskPositions();
 }
 
+//добавление задачи
 void ScrumBoard::addTask(const std::string& taskName, int section) {
     if (section >= 0 && section < 4) {
         float totalWidth = 1820.0f;
@@ -200,7 +222,7 @@ void ScrumBoard::addTask(const std::string& taskName, int section) {
     }
 }
 
-//обновление позиций задач и прокрутка
+//обновление позиций задач
 void ScrumBoard::updateTaskPositions() {
     float totalWidth = 1820.0f;
     float sectionWidth = (totalWidth - 120.0f) / 4.0f;
@@ -219,16 +241,24 @@ void ScrumBoard::updateTaskPositions() {
     }
 }
 
-//обработка взаимодействия пользователя
+//обработка событий
 void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
     //проверка нажатия левой кнопки мышки
     if (event.type == sf::Event::MouseButtonPressed) {
         if (event.mouseButton.button == sf::Mouse::Left) {
             sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
             
-            //проверка кнопки компании
+            //проверка кнопки компаний
             if (companyButton.getGlobalBounds().contains(mousePos)) {
                 showCompanyWindow = !showCompanyWindow;
+                companyButtonPressed = true;
+                return;
+            }
+            
+            //проверка кнопки сохранить
+            if (saveButton.getGlobalBounds().contains(mousePos)) {
+                saveButtonPressed = true;
+                std::cout << "Кнопка 'Сохранить' нажата!" << std::endl;
                 return;
             }
             
@@ -246,32 +276,8 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
                     showCompanyWindow = false;
                 }
             }
-        }
-    }
-    
-    //прокрутка в секциях
-    if (event.type == sf::Event::MouseWheelScrolled) {
-        float mouseX = event.mouseWheelScroll.x;
-        
-        //в какой секции находится
-        for (int i = 0; i < 4; i++) {
-            if (sections[i].getGlobalBounds().contains(mouseX, event.mouseWheelScroll.y)) {
-                float scrollDelta = -event.mouseWheelScroll.delta * 30.0f;
-                float maxScroll = std::max(0.0f, (tasks[i].size() * 90.0f) - 650.0f);
-                
-                scrollOffsets[i] += scrollDelta;
-                scrollOffsets[i] = std::max(0.0f, std::min(scrollOffsets[i], maxScroll));
-                updateTaskPositions();
-                break;
-            }
-        }
-    }
-    
-    //перетаскивание задач
-    if (event.type == sf::Event::MouseButtonPressed) {
-        if (event.mouseButton.button == sf::Mouse::Left) {
-            sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
             
+            //перетаскивание задач
             for (int i = 0; i < 4; i++) {
                 for (size_t j = 0; j < tasks[i].size(); j++) {
                     if (tasks[i][j].shape.getGlobalBounds().contains(mousePos)) {
@@ -283,7 +289,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
                 }
             }
             
-            //проверка нажатия на задачу
+            //проверка нажатия на секцию для прокрутки
             for (int i = 0; i < 4; i++) {
                 if (sections[i].getGlobalBounds().contains(mousePos)) {
                     isDraggingScroll[i] = true;
@@ -297,18 +303,21 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
     //отпускание мышки
     if (event.type == sf::Event::MouseButtonReleased) {
         if (event.mouseButton.button == sf::Mouse::Left) {
+            saveButtonPressed = false;
+            companyButtonPressed = false;
+            
             if (draggingTaskSection != -1 && draggingTaskIndex != -1) {
                 Task& draggedTask = tasks[draggingTaskSection][draggingTaskIndex];
                 draggedTask.isMoving = false;
                 
-                //центр перетаскивания задачи
+                //центр перетаскиваемой задачи
                 sf::FloatRect taskBounds = draggedTask.shape.getGlobalBounds();
                 sf::Vector2f taskCenter(
                     taskBounds.left + taskBounds.width / 2,
                     taskBounds.top + taskBounds.height / 2
                 );
                 
-                //какая секция
+                //определение новой секции
                 for (int newSection = 0; newSection < 4; newSection++) {
                     if (sections[newSection].getGlobalBounds().contains(taskCenter)) {
                         if (newSection != draggingTaskSection) {
@@ -340,7 +349,9 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
         }
     }
     
+    //движение мыши
     if (event.type == sf::Event::MouseMoved) {
+        //перетаскивание задач
         if (draggingTaskSection != -1 && draggingTaskIndex != -1) {
             Task& draggedTask = tasks[draggingTaskSection][draggingTaskIndex];
             if (draggedTask.isMoving) {
@@ -348,7 +359,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
             }
         }
         
-        //отключение прокрутки и перетаскивания
+        //прокрутка секций
         for (int i = 0; i < 4; i++) {
             if (isDraggingScroll[i]) {
                 sf::Vector2f mousePos(event.mouseMove.x, event.mouseMove.y);
@@ -362,37 +373,71 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
             }
         }
     }
+    
+    //прокрутка колесиком мыши
+    if (event.type == sf::Event::MouseWheelScrolled) {
+        float mouseX = event.mouseWheelScroll.x;
+        
+        //определение в какой секции находится мышь
+        for (int i = 0; i < 4; i++) {
+            if (sections[i].getGlobalBounds().contains(mouseX, event.mouseWheelScroll.y)) {
+                float scrollDelta = -event.mouseWheelScroll.delta * 30.0f;
+                float maxScroll = std::max(0.0f, (tasks[i].size() * 90.0f) - 650.0f);
+                
+                scrollOffsets[i] += scrollDelta;
+                scrollOffsets[i] = std::max(0.0f, std::min(scrollOffsets[i], maxScroll));
+                updateTaskPositions();
+                break;
+            }
+        }
+    }
 }
 
-//обновление приложения
+//обновление
 void ScrumBoard::update(float deltaTime) {
+    //визуальная обратная связь для кнопки сохранить
+    if (saveButtonPressed) {
+        saveButton.setFillColor(sf::Color(150, 190, 220));
+    } else {
+        saveButton.setFillColor(sf::Color(180, 210, 235));
+    }
+    
+    //визуальная обратная связь для кнопки компаний
+    if (companyButtonPressed) {
+        companyButton.setFillColor(sf::Color(150, 190, 220));
+    } else {
+        companyButton.setFillColor(sf::Color(180, 210, 235));
+    }
 }
 
-//рисовка всех позиций
+//рисование
 void ScrumBoard::draw(sf::RenderWindow& window) {
     window.draw(titleText);
     
     window.draw(topPanel);
     window.draw(companyButton);
     window.draw(companyButtonText);
+    window.draw(saveButton);
+    window.draw(saveButtonText);
     
-    // Рисуем секции
+    //рисуем секции
     for (const auto& section : sections) {
         window.draw(section);
     }
     
-    // Рисуем заголовки секций
+    //рисуем заголовки секций
     for (const auto& text : sectionTexts) {
         window.draw(text);
     }
     
-    // Рисуем задачи
+    //рисуем задачи
     for (int i = 0; i < 4; i++) {
         sf::FloatRect sectionBounds = sections[i].getGlobalBounds();
         
         for (const auto& task : tasks[i]) {
             sf::FloatRect taskBounds = task.shape.getGlobalBounds();
             
+            //проверка видимости задачи в секции
             if (taskBounds.top + taskBounds.height >= sectionBounds.top && 
                 taskBounds.top <= sectionBounds.top + sectionBounds.height) {
                 window.draw(task.shape);
@@ -401,21 +446,21 @@ void ScrumBoard::draw(sf::RenderWindow& window) {
         }
     }
     
-    // Рисуем окно компаний
+    //рисуем окно компаний
     if (showCompanyWindow) {
-        // Затемняем фон под окном
+        //затемнение фона под окном
         sf::RectangleShape overlay(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
         overlay.setFillColor(sf::Color(0, 0, 0, 150));
         window.draw(overlay);
         
         window.draw(companyWindow);
         
-        // Рисуем прямоугольники компаний С ОБВОДКОЙ
+        //рисуем прямоугольники компаний
         for (const auto& rect : companyRects) {
             window.draw(rect);
         }
         
-        // Рисуем текст компаний
+        //рисуем текст компаний
         for (const auto& text : companyTexts) {
             window.draw(text);
         }

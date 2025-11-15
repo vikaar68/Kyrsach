@@ -24,17 +24,23 @@ private:
     std::vector<sf::Vector2f> dragStartPositions;
     int draggingTaskSection;
     int draggingTaskIndex;
+    sf::Vector2f dragStartMousePos;
     
     //интерфейс верхней панели
     sf::RectangleShape topPanel;
     sf::RectangleShape companyButton;
+    sf::RectangleShape saveButton;
     sf::Text companyButtonText;
+    sf::Text saveButtonText;
     bool showCompanyWindow;
     sf::RectangleShape companyWindow;
-    std::vector<sf::RectangleShape> dividerLines;
-    std::vector<std::string> companies;
     std::vector<sf::RectangleShape> companyRects;
     std::vector<sf::Text> companyTexts;
+    std::vector<std::string> companies;
+    
+    //состояние кнопок
+    bool companyButtonPressed;
+    bool saveButtonPressed;
 
 public:
     ScrumBoard();
@@ -51,4 +57,5 @@ private:
     void createTitle(); //текст названия
     void createTopPanel(); //верхняя панель
     void createCompanyWindow(); //окно компаний
+    void centerText(sf::Text& text, const sf::RectangleShape& shape, float yOffset = 0.0f); //центрирование текста
 };
