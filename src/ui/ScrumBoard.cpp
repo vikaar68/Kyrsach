@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
+//название секций и компаний
 ScrumBoard::ScrumBoard() {
     sectionNames = {"Назначено", "В процессе", "Блокировано", "Готово"};
     tasks.resize(4);
@@ -21,15 +22,16 @@ bool ScrumBoard::initialize() {
         return false;
     }
     
-    createTitle();
-    createTopPanel();
-    createSections();
-    createSampleTasks();
-    createCompanyWindow();
+    createTitle(); //текст названия
+    createTopPanel(); //верхняя панель
+    createSections(); //секции
+    createSampleTasks(); //текст секций
+    createCompanyWindow(); //окно компании
     
     return true;
 }
 
+//название работы
 void ScrumBoard::createTitle() {
     titleText.setString("Scrum Board - Управление задачами");
     titleText.setFont(font);
@@ -39,8 +41,8 @@ void ScrumBoard::createTitle() {
     titleText.setPosition(650, 110);
 }
 
+//верхняя панель
 void ScrumBoard::createTopPanel() {
-    //панель
     topPanel.setSize(sf::Vector2f(1920, 60));
     topPanel.setFillColor(sf::Color(120, 165, 205));
     topPanel.setOutlineThickness(0);
@@ -67,6 +69,7 @@ void ScrumBoard::createTopPanel() {
     );
 }
 
+//открытие окна компаний
 void ScrumBoard::createCompanyWindow() {
     float companyHeight = 55.0f;
     float padding = 15.0f;
@@ -89,12 +92,13 @@ void ScrumBoard::createCompanyWindow() {
     
     float companyWidth = windowWidth - padding * 2;
     
+    //создание кнопки компаний
     for (size_t i = 0; i < companies.size(); i++) {
         sf::RectangleShape companyRect;
         companyRect.setSize(sf::Vector2f(companyWidth, companyHeight));
         companyRect.setFillColor(sf::Color(180, 210, 235));
-        companyRect.setOutlineColor(sf::Color(100, 130, 160)); // ? ЦВЕТ ОБВОДКИ
-        companyRect.setOutlineThickness(3); // ? ТОЛЩИНА ОБВОДКИ
+        companyRect.setOutlineColor(sf::Color(100, 130, 160)); //ЦВЕТ ОБВОДКИ
+        companyRect.setOutlineThickness(3); //ТОЛЩИНА ОБВОДКИ
         companyRect.setPosition(startX + padding, startY + padding + i * companyHeight);
         companyRects.push_back(companyRect);
         
@@ -114,6 +118,7 @@ void ScrumBoard::createCompanyWindow() {
     }
 }
 
+//создание и расположение секций
 void ScrumBoard::createSections() {
     sf::Color sectionColors[] = {
         sf::Color(180, 210, 235),
@@ -151,6 +156,7 @@ void ScrumBoard::createSections() {
     }
 }
 
+//примеры в секциях
 void ScrumBoard::createSampleTasks() {
     for (int i = 0; i < 4; i++) {
         tasks[i].clear();
@@ -194,6 +200,7 @@ void ScrumBoard::addTask(const std::string& taskName, int section) {
     }
 }
 
+//обновление позиций задач и прокрутка
 void ScrumBoard::updateTaskPositions() {
     float totalWidth = 1820.0f;
     float sectionWidth = (totalWidth - 120.0f) / 4.0f;
@@ -212,16 +219,20 @@ void ScrumBoard::updateTaskPositions() {
     }
 }
 
+//обработка взаимодействия пользователя
 void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
+    //проверка нажатия левой кнопки мышки
     if (event.type == sf::Event::MouseButtonPressed) {
         if (event.mouseButton.button == sf::Mouse::Left) {
             sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
             
+            //проверка кнопки компании
             if (companyButton.getGlobalBounds().contains(mousePos)) {
                 showCompanyWindow = !showCompanyWindow;
                 return;
             }
             
+            //выбор нужной компании
             if (showCompanyWindow) {
                 for (size_t i = 0; i < companyRects.size(); i++) {
                     if (companyRects[i].getGlobalBounds().contains(mousePos)) {
@@ -230,6 +241,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
                         return;
                     }
                 }
+                //закрытие окна, если нажал вне него
                 if (!companyWindow.getGlobalBounds().contains(mousePos)) {
                     showCompanyWindow = false;
                 }
@@ -237,9 +249,11 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
         }
     }
     
+    //прокрутка в секциях
     if (event.type == sf::Event::MouseWheelScrolled) {
         float mouseX = event.mouseWheelScroll.x;
         
+        //в какой секции находится
         for (int i = 0; i < 4; i++) {
             if (sections[i].getGlobalBounds().contains(mouseX, event.mouseWheelScroll.y)) {
                 float scrollDelta = -event.mouseWheelScroll.delta * 30.0f;
@@ -253,6 +267,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
         }
     }
     
+    //перетаскивание задач
     if (event.type == sf::Event::MouseButtonPressed) {
         if (event.mouseButton.button == sf::Mouse::Left) {
             sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
@@ -268,6 +283,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
                 }
             }
             
+            //проверка нажатия на задачу
             for (int i = 0; i < 4; i++) {
                 if (sections[i].getGlobalBounds().contains(mousePos)) {
                     isDraggingScroll[i] = true;
@@ -278,18 +294,21 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
         }
     }
     
+    //отпускание мышки
     if (event.type == sf::Event::MouseButtonReleased) {
         if (event.mouseButton.button == sf::Mouse::Left) {
             if (draggingTaskSection != -1 && draggingTaskIndex != -1) {
                 Task& draggedTask = tasks[draggingTaskSection][draggingTaskIndex];
                 draggedTask.isMoving = false;
                 
+                //центр перетаскивания задачи
                 sf::FloatRect taskBounds = draggedTask.shape.getGlobalBounds();
                 sf::Vector2f taskCenter(
                     taskBounds.left + taskBounds.width / 2,
                     taskBounds.top + taskBounds.height / 2
                 );
                 
+                //какая секция
                 for (int newSection = 0; newSection < 4; newSection++) {
                     if (sections[newSection].getGlobalBounds().contains(taskCenter)) {
                         if (newSection != draggingTaskSection) {
@@ -329,6 +348,7 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
             }
         }
         
+        //отключение прокрутки и перетаскивания
         for (int i = 0; i < 4; i++) {
             if (isDraggingScroll[i]) {
                 sf::Vector2f mousePos(event.mouseMove.x, event.mouseMove.y);
@@ -344,9 +364,11 @@ void ScrumBoard::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
     }
 }
 
+//обновление приложения
 void ScrumBoard::update(float deltaTime) {
 }
 
+//рисовка всех позиций
 void ScrumBoard::draw(sf::RenderWindow& window) {
     window.draw(titleText);
     
